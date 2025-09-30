@@ -16,8 +16,11 @@ import {
   Snackbar,
   Alert,
   CircularProgress,
+  Grid,
+  Card,
+  CardContent,
 } from "@mui/material";
-import { People, DirectionsCar, BarChart, Dashboard } from "@mui/icons-material";
+import { People, DirectionsCar, BarChart, Dashboard, Download } from "@mui/icons-material";
 import {
   ResponsiveContainer,
   PieChart,
@@ -31,7 +34,11 @@ import {
 } from "recharts";
 import API from "../services/api";
 import { useNavigate } from "react-router-dom";
-import Travels from "./Travels"; // ✅ Reuse user dashboard functions
+import Travels from "./Travels";
+
+// 📦 PDF library
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 function TabPanel({ children, value, index }) {
   return (
@@ -41,20 +48,84 @@ function TabPanel({ children, value, index }) {
   );
 }
 
+// ✅ Utility: CSV/JSON download
+const downloadFile = (data, filename, type = "csv") => {
+  if (!data || data.length === 0) {
+    alert("No data available to download.");
+    return;
+  }
+
+  let blob;
+  if (type === "json") {
+    blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  } else {
+    const headers = Object.keys(data[0]).join(",") + "\n";
+    const rows = data.map((row) => Object.values(row).join(",")).join("\n");
+    blob = new Blob([headers + rows], { type: "text/csv" });
+  }
+
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  window.URL.revokeObjectURL(url);
+};
+
+// ✅ Utility: Enhanced PDF download
+const downloadPDF = (data, filename, title) => {
+  if (!data || data.length === 0) {
+    alert("No data to download.");
+    return;
+  }
+
+  const doc = new jsPDF();
+  doc.setFontSize(16).setFont("helvetica", "bold");
+  doc.text("Haycarb PLC - FuelTracker Report", 14, 15);
+
+  doc.setFontSize(12).setFont("helvetica", "normal");
+  doc.text(title, 14, 23);
+
+  autoTable(doc, {
+    head: [Object.keys(data[0])],
+    body: data.map((row) => Object.values(row)),
+    startY: 30,
+    theme: "striped",
+    headStyles: { fillColor: [46, 125, 50], textColor: [255, 255, 255], halign: "center" },
+    bodyStyles: { halign: "center", valign: "middle" },
+    alternateRowStyles: { fillColor: [245, 245, 245] },
+    didDrawPage: (dataArg) => {
+      const pageCount = doc.internal.getNumberOfPages();
+      const pageSize = doc.internal.pageSize;
+      const pageHeight = pageSize.height || pageSize.getHeight();
+      const today = new Date();
+
+      doc.setFontSize(10).setTextColor(100);
+      doc.text(
+        `Exported on: ${today.toLocaleDateString()} ${today.toLocaleTimeString()}`,
+        dataArg.settings.margin.left,
+        pageHeight - 10
+      );
+      doc.text(
+        `Page ${dataArg.pageNumber} of ${pageCount}`,
+        pageSize.width - dataArg.settings.margin.right - 40,
+        pageHeight - 10
+      );
+    },
+  });
+
+  doc.save(filename);
+};
+
 function AdminDashboard() {
   const [tab, setTab] = useState(0);
   const [users, setUsers] = useState([]);
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [snackbar, setSnackbar] = useState({
-    open: false,
-    message: "",
-    severity: "success",
-  });
-
+  const [snackbar, setSnackbar] = useState({ open: false, message: "", severity: "success" });
   const navigate = useNavigate();
 
-  // Load users
+  // Fetch users
   const fetchUsers = async () => {
     try {
       const res = await API.get("/users/all");
@@ -64,7 +135,7 @@ function AdminDashboard() {
     }
   };
 
-  // Load travel logs
+  // Fetch travel logs
   const fetchLogs = async () => {
     try {
       const res = await API.get("/travels/all");
@@ -79,16 +150,12 @@ function AdminDashboard() {
     fetchLogs();
   }, []);
 
-  // Update role
+  // Role update
   const updateRole = async (email, role) => {
     try {
       setLoading(true);
       await API.put(`/users/${email}`, { role });
-      setSnackbar({
-        open: true,
-        message: `✅ Updated ${email} to ${role}`,
-        severity: "success",
-      });
+      setSnackbar({ open: true, message: `✅ Updated ${email} to ${role}`, severity: "success" });
       fetchUsers();
     } catch (err) {
       setSnackbar({
@@ -107,18 +174,10 @@ function AdminDashboard() {
     try {
       setLoading(true);
       await API.delete(`/users/${email}`);
-      setSnackbar({
-        open: true,
-        message: `🗑️ Deleted ${email}`,
-        severity: "success",
-      });
+      setSnackbar({ open: true, message: `🗑️ Deleted ${email}`, severity: "success" });
       fetchUsers();
     } catch (err) {
-      setSnackbar({
-        open: true,
-        message: err.response?.data?.detail || "Delete failed",
-        severity: "error",
-      });
+      setSnackbar({ open: true, message: err.response?.data?.detail || "Delete failed", severity: "error" });
     } finally {
       setLoading(false);
     }
@@ -129,27 +188,69 @@ function AdminDashboard() {
   const privateTotal = logs.reduce((sum, l) => sum + (l.private_km || 0), 0);
   const distanceByUser = users.map((u) => ({
     name: u.name,
-    total: logs
-      .filter((l) => l.user_email === u.email)
-      .reduce((s, l) => s + (l.total_km || 0), 0),
+    total: logs.filter((l) => l.user_email === u.email).reduce((s, l) => s + (l.total_km || 0), 0),
   }));
 
   return (
     <Box sx={{ p: 3 }}>
-      <Typography variant="h4" fontWeight={700} gutterBottom>
-        Admin Dashboard
+      <Typography variant="h4" fontWeight={700} gutterBottom color="primary">
+        Admin Dashboard – Haycarb PLC
       </Typography>
 
+      {/* KPI Cards */}
+      <Grid container spacing={3} sx={{ mb: 3 }}>
+        <Grid item xs={12} sm={4}>
+          <Card elevation={3}>
+            <CardContent>
+              <Typography variant="h6">Total Employees</Typography>
+              <Typography variant="h4" color="primary">{users.length}</Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} sm={4}>
+          <Card elevation={3}>
+            <CardContent>
+              <Typography variant="h6">Official KM</Typography>
+              <Typography variant="h4" color="success.main">{officialTotal}</Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} sm={4}>
+          <Card elevation={3}>
+            <CardContent>
+              <Typography variant="h6">Private KM</Typography>
+              <Typography variant="h4" color="error.main">{privateTotal}</Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+
       {/* Tabs */}
-      <Tabs value={tab} onChange={(e, v) => setTab(v)} sx={{ mb: 2 }}>
+      <Tabs
+        value={tab}
+        onChange={(e, v) => setTab(v)}
+        sx={{
+          mb: 2,
+          "& .MuiTab-root.Mui-selected": { color: "primary.main", fontWeight: 700 },
+          "& .MuiTabs-indicator": { backgroundColor: "primary.main" },
+        }}
+      >
         <Tab icon={<People />} label="Users" />
         <Tab icon={<DirectionsCar />} label="Travel Logs" />
         <Tab icon={<BarChart />} label="Analytics" />
-        <Tab icon={<Dashboard />} label="User Functions" /> {/* ✅ New tab */}
+        <Tab icon={<Dashboard />} label="User Functions" />
       </Tabs>
 
       {/* Users Tab */}
       <TabPanel value={tab} index={0}>
+        <Box sx={{ mb: 2, display: "flex", gap: 2, justifyContent: "flex-end" }}>
+          <Button variant="contained" startIcon={<Download />} onClick={() => downloadFile(users, "user_list.csv")}>
+            CSV
+          </Button>
+          <Button variant="contained" startIcon={<Download />} onClick={() => downloadPDF(users, "users.pdf", "User List")}>
+            PDF
+          </Button>
+        </Box>
         <Paper>
           <TableContainer>
             <Table>
@@ -169,50 +270,23 @@ function AdminDashboard() {
                     <TableCell>{u.email}</TableCell>
                     <TableCell>{u.fuel_card_no}</TableCell>
                     <TableCell>
-                      <Chip
-                        label={u.role}
-                        color={u.role === "admin" ? "success" : "default"}
-                        size="small"
-                      />
+                      <Chip label={u.role} color={u.role === "admin" ? "success" : "default"} size="small" />
                     </TableCell>
                     <TableCell>
                       {u.role !== "admin" && (
-                        <Button
-                          variant="contained"
-                          size="small"
-                          sx={{ mr: 1 }}
-                          onClick={() => updateRole(u.email, "admin")}
-                          disabled={loading}
-                        >
+                        <Button variant="contained" size="small" sx={{ mr: 1 }} onClick={() => updateRole(u.email, "admin")} disabled={loading}>
                           Make Admin
                         </Button>
                       )}
                       {u.role !== "employee" && (
-                        <Button
-                          variant="outlined"
-                          size="small"
-                          sx={{ mr: 1 }}
-                          onClick={() => updateRole(u.email, "employee")}
-                          disabled={loading}
-                        >
+                        <Button variant="outlined" size="small" sx={{ mr: 1 }} onClick={() => updateRole(u.email, "employee")} disabled={loading}>
                           Make Employee
                         </Button>
                       )}
-                      <Button
-                        variant="contained"
-                        color="error"
-                        size="small"
-                        onClick={() => deleteUser(u.email)}
-                        disabled={loading}
-                      >
+                      <Button variant="contained" color="error" size="small" onClick={() => deleteUser(u.email)} disabled={loading}>
                         Delete
                       </Button>
-                      {/* ✅ View as User */}
-                      <Button
-                        variant="text"
-                        size="small"
-                        onClick={() => navigate(`/dashboard?user=${u.email}`)}
-                      >
+                      <Button variant="text" size="small" onClick={() => navigate(`/dashboard?user=${u.email}`)}>
                         View Dashboard
                       </Button>
                     </TableCell>
@@ -226,6 +300,14 @@ function AdminDashboard() {
 
       {/* Travel Logs Tab */}
       <TabPanel value={tab} index={1}>
+        <Box sx={{ mb: 2, display: "flex", gap: 2, justifyContent: "flex-end" }}>
+          <Button variant="contained" startIcon={<Download />} onClick={() => downloadFile(logs, "travel_logs.csv")}>
+            CSV
+          </Button>
+          <Button variant="contained" startIcon={<Download />} onClick={() => downloadPDF(logs, "travel_logs.pdf", "Travel Logs")}>
+            PDF
+          </Button>
+        </Box>
         <Paper>
           <TableContainer>
             <Table>
@@ -251,11 +333,7 @@ function AdminDashboard() {
                     <TableCell>{log.official_km}</TableCell>
                     <TableCell>{log.private_km}</TableCell>
                     <TableCell>
-                      <Chip
-                        label={`${log.total_km} km`}
-                        color="primary"
-                        size="small"
-                      />
+                      <Chip label={`${log.total_km} km`} color="primary" size="small" />
                     </TableCell>
                     <TableCell>{log.remarks || "—"}</TableCell>
                   </TableRow>
@@ -268,6 +346,23 @@ function AdminDashboard() {
 
       {/* Analytics Tab */}
       <TabPanel value={tab} index={2}>
+        <Box sx={{ mb: 2, display: "flex", gap: 2, justifyContent: "flex-end" }}>
+          <Button
+            variant="contained"
+            startIcon={<Download />}
+            onClick={() => downloadFile([{ officialTotal, privateTotal, distanceByUser }], "analytics_summary.json", "json")}
+          >
+            JSON
+          </Button>
+          <Button
+            variant="contained"
+            startIcon={<Download />}
+            onClick={() => downloadPDF([{ OfficialKM: officialTotal, PrivateKM: privateTotal, Users: users.length }], "analytics_summary.pdf", "Analytics Summary")}
+          >
+            PDF
+          </Button>
+        </Box>
+
         <Typography variant="h6" gutterBottom>
           Analytics Overview
         </Typography>
@@ -276,17 +371,9 @@ function AdminDashboard() {
           {/* Official vs Private Pie */}
           <ResponsiveContainer width="45%" height={300}>
             <PieChart>
-              <Pie
-                data={[
-                  { name: "Official KM", value: officialTotal },
-                  { name: "Private KM", value: privateTotal },
-                ]}
-                dataKey="value"
-                outerRadius={100}
-                label
-              >
-                <Cell fill="#4caf50" />
-                <Cell fill="#f44336" />
+              <Pie data={[{ name: "Official KM", value: officialTotal }, { name: "Private KM", value: privateTotal }]} dataKey="value" outerRadius={100} label>
+                <Cell fill="#2E7D32" /> {/* Haycarb Green */}
+                <Cell fill="#c62828" /> {/* Red for private */}
               </Pie>
               <Tooltip />
             </PieChart>
@@ -298,18 +385,18 @@ function AdminDashboard() {
               <XAxis dataKey="name" />
               <YAxis />
               <Tooltip />
-              <Bar dataKey="total" fill="#2196f3" />
+              <Bar dataKey="total" fill="#1976d2" />
             </RBarChart>
           </ResponsiveContainer>
         </Box>
       </TabPanel>
 
-      {/* ✅ User Functions Tab */}
+      {/* User Functions Tab */}
       <TabPanel value={tab} index={3}>
         <Typography variant="h6" gutterBottom>
           User Functions (Preview)
         </Typography>
-        <Travels /> {/* Reuse user component */}
+        <Travels />
       </TabPanel>
 
       {/* Snackbar */}
@@ -319,24 +406,13 @@ function AdminDashboard() {
         onClose={() => setSnackbar({ ...snackbar, open: false })}
         anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
       >
-        <Alert
-          severity={snackbar.severity}
-          onClose={() => setSnackbar({ ...snackbar, open: false })}
-          variant="filled"
-        >
+        <Alert severity={snackbar.severity} onClose={() => setSnackbar({ ...snackbar, open: false })} variant="filled">
           {snackbar.message}
         </Alert>
       </Snackbar>
 
       {loading && (
-        <Box
-          sx={{
-            position: "fixed",
-            top: "50%",
-            left: "50%",
-            transform: "translate(-50%, -50%)",
-          }}
-        >
+        <Box sx={{ position: "fixed", top: "50%", left: "50%", transform: "translate(-50%, -50%)" }}>
           <CircularProgress />
         </Box>
       )}

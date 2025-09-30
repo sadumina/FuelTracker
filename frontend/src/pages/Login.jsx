@@ -36,33 +36,35 @@ function Login() {
   const [error, setError] = useState("");
   const navigate = useNavigate();
 
- const handleLogin = async (e) => {
-  e.preventDefault();
-  setError("");
-  setLoading(true);
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setError("");
 
-  try {
-    const res = await API.post("/users/login", { email, password });
-
-    // Save token
-    localStorage.setItem("token", res.data.access_token);
-
-    // Decode token to get role
-    const decoded = jwtDecode(res.data.access_token);
-    localStorage.setItem("role", decoded.role);
-
-    // Redirect based on role
-    if (decoded.role === "admin") {
-      navigate("/admin");
-    } else {
-      navigate("/dashboard");
+    // ✅ Haycarb email validation
+    if (!email.endsWith("@haycarb.com")) {
+      setError("Only Haycarb employees can login. Use your @haycarb.com email.");
+      return;
     }
-  } catch (err) {
-    setError(err.response?.data?.detail || "Login failed. Please try again.");
-  } finally {
-    setLoading(false);
-  }
-};
+
+    setLoading(true);
+    try {
+      const res = await API.post("/users/login", { email, password });
+
+      localStorage.setItem("token", res.data.access_token);
+      const decoded = jwtDecode(res.data.access_token);
+      localStorage.setItem("role", decoded.role);
+
+      if (decoded.role === "admin") {
+        navigate("/admin");
+      } else {
+        navigate("/dashboard");
+      }
+    } catch (err) {
+      setError(err.response?.data?.detail || "Login failed. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <Box
@@ -71,12 +73,12 @@ function Login() {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+        background: "linear-gradient(135deg, #1B5E20 0%, #4ba24fff 100%)",
         padding: 2,
       }}
     >
       <Container maxWidth="sm">
-        {/* Logo Section */}
+        {/* Logo */}
         <Box sx={{ textAlign: "center", mb: 4 }}>
           <Avatar
             sx={{
@@ -90,15 +92,7 @@ function Login() {
           >
             <LocalShipping sx={{ fontSize: 40, color: "#667eea" }} />
           </Avatar>
-          <Typography
-            variant="h3"
-            sx={{
-              fontWeight: 700,
-              color: "white",
-              mb: 1,
-              textShadow: "0 2px 4px rgba(0,0,0,0.1)",
-            }}
-          >
+          <Typography variant="h3" sx={{ fontWeight: 700, color: "white", mb: 1 }}>
             LogiTrack
           </Typography>
           <Typography variant="body1" sx={{ color: "rgba(255,255,255,0.9)" }}>
@@ -107,32 +101,17 @@ function Login() {
         </Box>
 
         {/* Login Card */}
-        <Paper
-          elevation={24}
-          sx={{
-            padding: 4,
-            borderRadius: 4,
-          }}
-        >
-          <Typography
-            variant="h4"
-            sx={{ fontWeight: 700, mb: 1, color: "#1a1a1a" }}
-          >
+        <Paper elevation={24} sx={{ padding: 4, borderRadius: 4 }}>
+          <Typography variant="h4" sx={{ fontWeight: 700, mb: 1, color: "#1a1a1a" }}>
             Welcome Back
           </Typography>
           <Typography variant="body2" sx={{ color: "text.secondary", mb: 3 }}>
             Sign in to continue to your dashboard
           </Typography>
 
-          {/* Error Alert */}
-          {error && (
-            <Alert severity="error" sx={{ mb: 3 }}>
-              {error}
-            </Alert>
-          )}
+          {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
 
           <form onSubmit={handleLogin}>
-            {/* Email Field */}
             <TextField
               fullWidth
               label="Email Address"
@@ -150,7 +129,6 @@ function Login() {
               }}
             />
 
-            {/* Password Field */}
             <TextField
               fullWidth
               label="Password"
@@ -167,10 +145,7 @@ function Login() {
                 ),
                 endAdornment: (
                   <InputAdornment position="end">
-                    <IconButton
-                      onClick={() => setShowPassword(!showPassword)}
-                      edge="end"
-                    >
+                    <IconButton onClick={() => setShowPassword(!showPassword)} edge="end">
                       {showPassword ? <VisibilityOff /> : <Visibility />}
                     </IconButton>
                   </InputAdornment>
@@ -178,35 +153,16 @@ function Login() {
               }}
             />
 
-            {/* Remember Me & Forgot Password */}
-            <Box
-              sx={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                mb: 3,
-              }}
-            >
+            <Box sx={{ display: "flex", justifyContent: "space-between", mb: 3 }}>
               <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={rememberMe}
-                    onChange={(e) => setRememberMe(e.target.checked)}
-                    color="primary"
-                  />
-                }
+                control={<Checkbox checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} />}
                 label="Remember me"
               />
-              <Link
-                href="#"
-                underline="hover"
-                sx={{ fontSize: "0.875rem", fontWeight: 600 }}
-              >
+              <Link href="#" underline="hover" sx={{ fontSize: "0.875rem", fontWeight: 600 }}>
                 Forgot Password?
               </Link>
             </Box>
 
-            {/* Login Button */}
             <Button
               type="submit"
               fullWidth
@@ -218,87 +174,20 @@ function Login() {
                 fontSize: "1rem",
                 fontWeight: 600,
                 textTransform: "none",
-                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                background: "linear-gradient(135deg, #1B5E20 0%, #4ba24fff 100%)",
                 boxShadow: 3,
                 "&:hover": {
-                  background: "linear-gradient(135deg, #5568d3 0%, #6a3d8f 100%)",
+                  background: "linear-gradient(135deg, #1B5E20 0%, #4ba24fff 100%)",
                   boxShadow: 6,
                 },
               }}
             >
-              {loading ? (
-                <CircularProgress size={24} sx={{ color: "white" }} />
-              ) : (
-                "Sign In"
-              )}
+              {loading ? <CircularProgress size={24} sx={{ color: "white" }} /> : "Sign In"}
             </Button>
           </form>
 
-          {/* Demo Credentials */}
-          <Paper
-            variant="outlined"
-            sx={{
-              mt: 3,
-              p: 2,
-              bgcolor: "#f0f4ff",
-              borderColor: "#667eea",
-            }}
-          >
-            <Typography
-              variant="caption"
-              sx={{ fontWeight: 700, color: "#667eea", display: "block", mb: 0.5 }}
-            >
-              Demo Credentials:
-            </Typography>
-            <Typography variant="caption" sx={{ display: "block", color: "text.secondary" }}>
-              Email: demo@example.com
-            </Typography>
-            <Typography variant="caption" sx={{ display: "block", color: "text.secondary" }}>
-              Password: demo123
-            </Typography>
-          </Paper>
-
-          {/* Divider */}
-          <Divider sx={{ my: 3 }}>
-            <Typography variant="body2" color="text.secondary">
-              Or continue with
-            </Typography>
-          </Divider>
-
-          {/* Social Login Buttons */}
-          <Box sx={{ display: "flex", gap: 2 }}>
-            <Button
-              fullWidth
-              variant="outlined"
-              sx={{ textTransform: "none", py: 1.5 }}
-            >
-              <Box
-                component="img"
-                src="https://www.google.com/favicon.ico"
-                sx={{ width: 20, height: 20, mr: 1 }}
-              />
-              Google
-            </Button>
-            <Button
-              fullWidth
-              variant="outlined"
-              sx={{ textTransform: "none", py: 1.5 }}
-            >
-              <Box
-                component="img"
-                src="https://github.com/favicon.ico"
-                sx={{ width: 20, height: 20, mr: 1 }}
-              />
-              GitHub
-            </Button>
-          </Box>
-
           {/* Sign Up Link */}
-          <Typography
-            variant="body2"
-            align="center"
-            sx={{ mt: 3, color: "text.secondary" }}
-          >
+          <Typography variant="body2" align="center" sx={{ mt: 3, color: "text.secondary" }}>
             Don't have an account?{" "}
             <Link href="/register" underline="hover" sx={{ fontWeight: 600 }}>
               Sign up for free
@@ -306,13 +195,8 @@ function Login() {
           </Typography>
         </Paper>
 
-        {/* Footer */}
-        <Typography
-          variant="body2"
-          align="center"
-          sx={{ mt: 3, color: "rgba(255,255,255,0.9)" }}
-        >
-          © 2025 LogiTrack. All rights reserved.
+        <Typography variant="body2" align="center" sx={{ mt: 3, color: "rgba(255,255,255,0.9)" }}>
+          © 2025 HayCarb. All rights reserved.
         </Typography>
       </Container>
     </Box>

@@ -40,10 +40,15 @@ function Register() {
   const handleRegister = async (e) => {
     e.preventDefault();
     setError("");
-    setLoading(true);
 
+    // ✅ Enforce haycarb.com email
+    if (!email.endsWith("@haycarb.com")) {
+      setError("Only Haycarb employees can register with @haycarb.com email.");
+      return;
+    }
+
+    setLoading(true);
     try {
-      // ✅ Force role = "employee"
       await API.post("/users/register", {
         name,
         email,
@@ -54,10 +59,7 @@ function Register() {
       alert("✅ Registered successfully. Please login.");
       navigate("/");
     } catch (err) {
-      console.error(err.response?.data || err.message);
-      setError(
-        err.response?.data?.detail || "Registration failed. Please try again."
-      );
+      setError(err.response?.data?.detail || "Registration failed. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -70,24 +72,14 @@ function Register() {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        background: `linear-gradient(135deg, ${alpha(
-          theme.palette.primary.main,
-          0.1
-        )} 0%, ${alpha(theme.palette.secondary.main, 0.1)} 100%)`,
+        background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.1)} 0%, ${alpha(theme.palette.secondary.main, 0.1)} 100%)`,
         py: 4,
         px: 2,
       }}
     >
       <Container maxWidth="sm">
-        <Paper
-          elevation={8}
-          sx={{
-            borderRadius: 3,
-            overflow: "hidden",
-            background: "white",
-          }}
-        >
-          {/* Header Section */}
+        <Paper elevation={8} sx={{ borderRadius: 3, background: "white" }}>
+          {/* Header */}
           <Box
             sx={{
               background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
@@ -121,175 +113,91 @@ function Register() {
             </Typography>
           </Box>
 
-          {/* Form Section */}
+          {/* Form */}
           <Box sx={{ p: 4 }}>
-            {error && (
-              <Alert severity="error" sx={{ mb: 3 }}>
-                {error}
-              </Alert>
-            )}
+            {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
 
             <Box component="form" onSubmit={handleRegister} noValidate>
               <Box sx={{ display: "flex", flexDirection: "column", gap: 2.5 }}>
-                {/* Full Name */}
                 <TextField
                   label="Full Name"
-                  variant="outlined"
-                  fullWidth
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   required
                   InputProps={{
                     startAdornment: (
-                      <InputAdornment position="start">
-                        <PersonOutline color="action" />
-                      </InputAdornment>
+                      <InputAdornment position="start"><PersonOutline /></InputAdornment>
                     ),
                   }}
                 />
-
-                {/* Email */}
                 <TextField
                   label="Email Address"
                   type="email"
-                  variant="outlined"
-                  fullWidth
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   InputProps={{
                     startAdornment: (
-                      <InputAdornment position="start">
-                        <EmailOutlined color="action" />
-                      </InputAdornment>
+                      <InputAdornment position="start"><EmailOutlined /></InputAdornment>
                     ),
                   }}
                 />
-
-                {/* Password */}
                 <TextField
                   label="Password"
                   type={showPassword ? "text" : "password"}
-                  variant="outlined"
-                  fullWidth
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   helperText="Minimum 8 characters"
                   InputProps={{
                     startAdornment: (
-                      <InputAdornment position="start">
-                        <LockOutlined color="action" />
-                      </InputAdornment>
+                      <InputAdornment position="start"><LockOutlined /></InputAdornment>
                     ),
                     endAdornment: (
                       <InputAdornment position="end">
-                        <IconButton
-                          onClick={() => setShowPassword(!showPassword)}
-                          edge="end"
-                        >
+                        <IconButton onClick={() => setShowPassword(!showPassword)} edge="end">
                           {showPassword ? <VisibilityOff /> : <Visibility />}
                         </IconButton>
                       </InputAdornment>
                     ),
                   }}
                 />
-
-                {/* Fuel Card Number */}
                 <TextField
                   label="Fuel Card Number"
-                  variant="outlined"
-                  fullWidth
                   value={fuelCardNo}
                   onChange={(e) => setFuelCardNo(e.target.value)}
                   required
                   InputProps={{
                     startAdornment: (
-                      <InputAdornment position="start">
-                        <CreditCard color="action" />
-                      </InputAdornment>
+                      <InputAdornment position="start"><CreditCard /></InputAdornment>
                     ),
                   }}
                 />
-
-                {/* Submit Button */}
                 <Button
                   type="submit"
                   variant="contained"
                   size="large"
-                  fullWidth
                   disabled={loading}
-                  sx={{
-                    mt: 2,
-                    py: 1.5,
-                    textTransform: "none",
-                    fontSize: "1rem",
-                    fontWeight: 600,
-                    borderRadius: 2,
-                    boxShadow: 3,
-                    "&:hover": {
-                      boxShadow: 6,
-                      transform: "translateY(-2px)",
-                    },
-                    transition: "all 0.3s ease",
-                  }}
-                  startIcon={
-                    loading && <CircularProgress size={20} color="inherit" />
-                  }
+                  sx={{ mt: 2, py: 1.5, fontSize: "1rem", fontWeight: 600 }}
+                  startIcon={loading && <CircularProgress size={20} />}
                 >
                   {loading ? "Creating Account..." : "Create Account"}
                 </Button>
               </Box>
             </Box>
 
-            {/* Divider */}
             <Divider sx={{ my: 3 }}>
-              <Typography variant="body2" color="text.secondary">
-                OR
-              </Typography>
+              <Typography variant="body2" color="text.secondary">OR</Typography>
             </Divider>
 
-            {/* Login Link */}
             <Box sx={{ textAlign: "center" }}>
               <Typography variant="body2" color="text.secondary">
                 Already have an account?{" "}
-                <Link
-                  component="button"
-                  variant="body2"
-                  onClick={() => navigate("/")}
-                  sx={{
-                    fontWeight: 600,
-                    cursor: "pointer",
-                    textDecoration: "none",
-                    "&:hover": {
-                      textDecoration: "underline",
-                    },
-                  }}
-                >
+                <Link component="button" onClick={() => navigate("/")} sx={{ fontWeight: 600 }}>
                   Sign In
                 </Link>
               </Typography>
             </Box>
-
-            {/* Footer */}
-            <Typography
-              variant="caption"
-              color="text.secondary"
-              sx={{
-                display: "block",
-                textAlign: "center",
-                mt: 3,
-              }}
-            >
-              By registering, you agree to our{" "}
-              <Link href="#" underline="hover">
-                Terms of Service
-              </Link>{" "}
-              and{" "}
-              <Link href="#" underline="hover">
-                Privacy Policy
-              </Link>
-            </Typography>
           </Box>
         </Paper>
       </Container>

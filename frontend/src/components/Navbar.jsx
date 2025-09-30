@@ -19,6 +19,8 @@ import {
   Person,
   Logout,
   LocalGasStation,
+  ArrowBack,
+  ArrowForward,
 } from "@mui/icons-material";
 
 function Navbar() {
@@ -51,7 +53,15 @@ function Navbar() {
       }}
     >
       <Container maxWidth="xl">
-        <Toolbar disableGutters>
+        <Toolbar disableGutters sx={{ gap: 1 }}>
+          {/* Back & Forward Buttons */}
+          <IconButton color="inherit" onClick={() => navigate(-1)}>
+            <ArrowBack />
+          </IconButton>
+          <IconButton color="inherit" onClick={() => navigate(1)}>
+            <ArrowForward />
+          </IconButton>
+
           {/* Logo - Left */}
           <Box
             sx={{
@@ -59,8 +69,9 @@ function Navbar() {
               alignItems: "center",
               cursor: "pointer",
               flexGrow: 1,
+              ml: 2,
             }}
-            
+            onClick={() => navigate("/dashboard")}
           >
             <LocalGasStation sx={{ fontSize: 32, mr: 1 }} />
             <Typography
