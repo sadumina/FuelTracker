@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import dayjs from "dayjs";
 import {
   Box,
@@ -28,16 +28,18 @@ import {
   Home,
   Route,
   CalendarMonth,
+  FiberNew,
 } from "@mui/icons-material";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
+import { keyframes } from "@mui/system";
 import API from "../services/api";
 
 function Travels() {
   const [logs, setLogs] = useState([]);
   const [form, setForm] = useState({
-    date: dayjs().format("YYYY-MM-DD"), // ✅ default today
+    date: dayjs().format("YYYY-MM-DD"),
     meter_start: "",
     meter_end: "",
     official_km: "",
@@ -52,6 +54,14 @@ function Travels() {
   });
   const [totalKm, setTotalKm] = useState(0);
 
+  const topRowRef = useRef(null); // ✅ ref for latest row
+
+  // ✅ animation for latest row
+  const highlightAnim = keyframes`
+    from { background-color: #C8E6C9; }
+    to { background-color: transparent; }
+  `;
+
   // Calculate total KM when meter values change
   useEffect(() => {
     if (form.meter_start && form.meter_end) {
@@ -63,63 +73,97 @@ function Travels() {
   }, [form.meter_start, form.meter_end]);
 
   // Fetch my travel logs
-  const fetchLogs = async () => {
-    try {
-      const res = await API.get("/travels/me");
-      setLogs(res.data);
-    } catch (err) {
-      console.error("Error fetching travel logs:", err.response?.data || err.message);
-      setSnackbar({
-        open: true,
-        message: err.response?.data?.detail || "Failed to load travel logs.",
-        severity: "error",
-      });
+  // Fetch my travel logs
+const fetchLogs = async () => {
+  try {
+    const res = await API.get("/travels/me");
+
+    // ✅ Sort logs: latest first
+    const sortedLogs = res.data.sort((a, b) => {
+      const aTime = a.created_at
+        ? new Date(a.created_at)
+        : new Date(parseInt(a._id.substring(0, 8), 16) * 1000);
+      const bTime = b.created_at
+        ? new Date(b.created_at)
+        : new Date(parseInt(b._id.substring(0, 8), 16) * 1000);
+      return bTime - aTime;
+    });
+
+    setLogs(sortedLogs);
+
+    // ✅ Pre-fill start meter with last end meter
+    if (sortedLogs.length > 0) {
+      setForm((prev) => ({
+        ...prev,
+        meter_start: sortedLogs[0].meter_end, // latest end becomes new start
+      }));
     }
-  };
+
+    // ✅ Auto scroll to latest
+    setTimeout(() => {
+      if (topRowRef.current) {
+        topRowRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+    }, 400);
+  } catch (err) {
+    console.error("Error fetching travel logs:", err.response?.data || err.message);
+    setSnackbar({
+      open: true,
+      message: err.response?.data?.detail || "Failed to load travel logs.",
+      severity: "error",
+    });
+  }
+};
+
 
   useEffect(() => {
     fetchLogs();
   }, []);
 
   // Add new travel log
-  const addLog = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      await API.post("/travels", {
-        date: form.date, // ✅ send employee-chosen date
-        meter_start: parseFloat(form.meter_start),
-        meter_end: parseFloat(form.meter_end),
-        official_km: parseFloat(form.official_km),
-        private_km: parseFloat(form.private_km),
-        remarks: form.remarks,
-      });
-      setSnackbar({
-        open: true,
-        message: "Travel log added successfully!",
-        severity: "success",
-      });
-      setForm({
-        date: dayjs().format("YYYY-MM-DD"),
-        meter_start: "",
-        meter_end: "",
-        official_km: "",
-        private_km: "",
-        remarks: "",
-      });
-      setTotalKm(0);
-      fetchLogs();
-    } catch (err) {
-      console.error("Error adding travel log:", err.response?.data || err.message);
-      setSnackbar({
-        open: true,
-        message: err.response?.data?.detail || "Failed to add travel log.",
-        severity: "error",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+ const addLog = async (e) => {
+  e.preventDefault();
+  setLoading(true);
+  try {
+    const res = await API.post("/travels", {
+      date: form.date,
+      meter_start: parseFloat(form.meter_start),
+      meter_end: parseFloat(form.meter_end),
+      official_km: parseFloat(form.official_km),
+      private_km: parseFloat(form.private_km),
+      remarks: form.remarks,
+    });
+
+    setSnackbar({
+      open: true,
+      message: "✅ Travel log added successfully!",
+      severity: "success",
+    });
+
+    // ✅ After adding, fetch logs and pre-fill new start meter automatically
+    await fetchLogs();
+
+    setForm({
+      date: dayjs().format("YYYY-MM-DD"),
+      meter_start: res.data.meter_end, // latest end = new start
+      meter_end: "",
+      official_km: "",
+      private_km: "",
+      remarks: "",
+    });
+    setTotalKm(0);
+  } catch (err) {
+    console.error("Error adding travel log:", err.response?.data || err.message);
+    setSnackbar({
+      open: true,
+      message: err.response?.data?.detail || "Failed to add travel log.",
+      severity: "error",
+    });
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   const handleCloseSnackbar = () => {
     setSnackbar({ ...snackbar, open: false });
@@ -416,54 +460,58 @@ function Travels() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  logs.map((log, i) => (
-                    <TableRow key={i} hover>
-                      <TableCell>
-                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                          {new Date(log.date).toLocaleDateString("en-US", {
-                            year: "numeric",
-                            month: "short",
-                            day: "numeric",
-                          })}
-                        </Typography>
-                      </TableCell>
-                      <TableCell align="center">
-                        {log.meter_start?.toLocaleString()}
-                      </TableCell>
-                      <TableCell align="center">
-                        {log.meter_end?.toLocaleString()}
-                      </TableCell>
-                      <TableCell align="center">
-                        <Chip
-                          label={`${log.official_km} km`}
-                          color="success"
-                          size="small"
-                          sx={{ fontWeight: 600 }}
-                        />
-                      </TableCell>
-                      <TableCell align="center">
-                        <Chip
-                          label={`${log.private_km} km`}
-                          color="secondary"
-                          size="small"
-                          sx={{ fontWeight: 600 }}
-                        />
-                      </TableCell>
-                      <TableCell align="center">
-                        <Chip
-                          label={`${log.total_km} km`}
-                          color="primary"
-                          size="small"
-                          sx={{ fontWeight: 600 }}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="body2" color="text.secondary">
-                          {log.remarks || "—"}
-                        </Typography>
-                      </TableCell>
-                    </TableRow>
-                  ))
+                  logs.map((log, i) => {
+                    const isLatest = i === 0;
+                    return (
+                      <TableRow
+                        key={i}
+                        ref={isLatest ? topRowRef : null}
+                        hover
+                        sx={{
+                          backgroundColor: isLatest ? "rgba(76, 175, 80, 0.08)" : "transparent",
+                          animation: isLatest ? `${highlightAnim} 2s ease-out` : "none",
+                        }}
+                      >
+                        <TableCell>
+                          <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                            {new Date(log.date).toLocaleDateString("en-US", {
+                              year: "numeric",
+                              month: "short",
+                              day: "numeric",
+                            })}
+                          </Typography>
+                        </TableCell>
+                        <TableCell align="center">{log.meter_start?.toLocaleString()}</TableCell>
+                        <TableCell align="center">{log.meter_end?.toLocaleString()}</TableCell>
+                        <TableCell align="center">
+                          <Chip label={`${log.official_km} km`} color="success" size="small" />
+                        </TableCell>
+                        <TableCell align="center">
+                          <Chip label={`${log.private_km} km`} color="secondary" size="small" />
+                        </TableCell>
+                        <TableCell align="center">
+                          <Chip label={`${log.total_km} km`} color="primary" size="small" />
+                        </TableCell>
+                        <TableCell>
+                          <Typography
+                            variant="body2"
+                            color="text.secondary"
+                            sx={{ display: "flex", alignItems: "center", gap: 1 }}
+                          >
+                            {log.remarks || "—"}
+                            {isLatest && (
+                              <Chip
+                                icon={<FiberNew />}
+                                label="NEW"
+                                color="success"
+                                size="small"
+                              />
+                            )}
+                          </Typography>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
                 )}
               </TableBody>
             </Table>

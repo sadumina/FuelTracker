@@ -90,13 +90,13 @@ function Login() {
               boxShadow: 4,
             }}
           >
-            <LocalShipping sx={{ fontSize: 40, color: "#667eea" }} />
+            <LocalShipping sx={{ fontSize: 40, color: "#66ea78ff" }} />
           </Avatar>
           <Typography variant="h3" sx={{ fontWeight: 700, color: "white", mb: 1 }}>
-            LogiTrack
+            FuelTrack
           </Typography>
           <Typography variant="body1" sx={{ color: "rgba(255,255,255,0.9)" }}>
-            Logistics Management System
+            Fuel Tracking System for HayCarb PLC
           </Typography>
         </Box>
 
@@ -158,9 +158,10 @@ function Login() {
                 control={<Checkbox checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} />}
                 label="Remember me"
               />
-              <Link href="#" underline="hover" sx={{ fontSize: "0.875rem", fontWeight: 600 }}>
-                Forgot Password?
-              </Link>
+              {/* <Link href="/forgot-password" underline="hover" sx={{ fontSize: "0.875rem", fontWeight: 600 }}>
+              Forgot Password?
+              </Link> */}
+
             </Box>
 
             <Button

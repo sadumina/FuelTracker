@@ -19,8 +19,21 @@ import {
   Grid,
   Card,
   CardContent,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  TextField,
 } from "@mui/material";
-import { People, DirectionsCar, BarChart, Dashboard, Download } from "@mui/icons-material";
+import {
+  People,
+  DirectionsCar,
+  BarChart,
+  Dashboard,
+  Download,
+  ExpandMore,
+  FiberNew,
+  Search,
+} from "@mui/icons-material";
 import {
   ResponsiveContainer,
   PieChart,
@@ -33,7 +46,6 @@ import {
   YAxis,
 } from "recharts";
 import API from "../services/api";
-import { useNavigate } from "react-router-dom";
 import Travels from "./Travels";
 
 // 📦 PDF library
@@ -123,7 +135,8 @@ function AdminDashboard() {
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: "", severity: "success" });
-  const navigate = useNavigate();
+  const [search, setSearch] = useState("");
+  // eslint-disable-next-line no-unused-vars
 
   // Fetch users
   const fetchUsers = async () => {
@@ -191,213 +204,267 @@ function AdminDashboard() {
     total: logs.filter((l) => l.user_email === u.email).reduce((s, l) => s + (l.total_km || 0), 0),
   }));
 
-  return (
-    <Box sx={{ p: 3 }}>
-      <Typography variant="h4" fontWeight={700} gutterBottom color="primary">
-        Admin Dashboard – Haycarb PLC
-      </Typography>
+  // ✅ Group logs by user
+  const groupedLogs = logs.reduce((acc, log) => {
+    if (!acc[log.user_email]) acc[log.user_email] = [];
+    acc[log.user_email].push(log);
+    return acc;
+  }, {});
 
-      {/* KPI Cards */}
-      <Grid container spacing={3} sx={{ mb: 3 }}>
+  // ✅ Filtered users
+  const filteredUsers = users.filter(
+    (u) =>
+      u.name?.toLowerCase().includes(search.toLowerCase()) ||
+      u.email?.toLowerCase().includes(search.toLowerCase())
+  );
+
+  return (
+    <Box
+      sx={{
+        minHeight: "100vh",
+        background: "linear-gradient(135deg, #2E7D32 0%, #1B5E20 100%)",
+        p: 3,
+      }}
+    >
+      {/* Header */}
+      <Paper
+        elevation={3}
+        sx={{
+          p: 2,
+          mb: 3,
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          borderRadius: 3,
+        }}
+      >
+        <Typography variant="h5" fontWeight={700} color="primary">
+          Haycarb PLC – Admin Dashboard
+        </Typography>
+        <Box sx={{ display: "flex", gap: 2, alignItems: "center" }}>
+          <Button variant="outlined" color="primary">Export All</Button>
+          <Chip label="Admin" color="success" />
+        </Box>
+      </Paper>
+
+      {/* KPI Section */}
+      <Grid container spacing={3} mb={3}>
         <Grid item xs={12} sm={4}>
-          <Card elevation={3}>
-            <CardContent>
-              <Typography variant="h6">Total Employees</Typography>
-              <Typography variant="h4" color="primary">{users.length}</Typography>
-            </CardContent>
+          <Card sx={{ borderRadius: 3, p: 2 }}>
+            <Typography variant="body2" color="text.secondary">Total Employees</Typography>
+            <Typography variant="h4" fontWeight={700}>{users.length}</Typography>
           </Card>
         </Grid>
         <Grid item xs={12} sm={4}>
-          <Card elevation={3}>
-            <CardContent>
-              <Typography variant="h6">Official KM</Typography>
-              <Typography variant="h4" color="success.main">{officialTotal}</Typography>
-            </CardContent>
+          <Card sx={{ borderRadius: 3, p: 2 }}>
+            <Typography variant="body2" color="text.secondary">Official KM</Typography>
+            <Typography variant="h4" fontWeight={700} color="success.main">{officialTotal}</Typography>
           </Card>
         </Grid>
         <Grid item xs={12} sm={4}>
-          <Card elevation={3}>
-            <CardContent>
-              <Typography variant="h6">Private KM</Typography>
-              <Typography variant="h4" color="error.main">{privateTotal}</Typography>
-            </CardContent>
+          <Card sx={{ borderRadius: 3, p: 2 }}>
+            <Typography variant="body2" color="text.secondary">Private KM</Typography>
+            <Typography variant="h4" fontWeight={700} color="error.main">{privateTotal}</Typography>
           </Card>
         </Grid>
       </Grid>
 
       {/* Tabs */}
-      <Tabs
-        value={tab}
-        onChange={(e, v) => setTab(v)}
-        sx={{
-          mb: 2,
-          "& .MuiTab-root.Mui-selected": { color: "primary.main", fontWeight: 700 },
-          "& .MuiTabs-indicator": { backgroundColor: "primary.main" },
-        }}
-      >
-        <Tab icon={<People />} label="Users" />
-        <Tab icon={<DirectionsCar />} label="Travel Logs" />
-        <Tab icon={<BarChart />} label="Analytics" />
-        <Tab icon={<Dashboard />} label="User Functions" />
-      </Tabs>
+      <Paper elevation={3} sx={{ borderRadius: 3 }}>
+        <Tabs
+          value={tab}
+          onChange={(e, v) => setTab(v)}
+          variant="fullWidth"
+          sx={{
+            borderBottom: 1,
+            borderColor: "divider",
+            "& .MuiTab-root": { fontWeight: 600 },
+          }}
+        >
+          <Tab icon={<People />} label="Users" />
+          <Tab icon={<DirectionsCar />} label="Travel Logs" />
+          <Tab icon={<BarChart />} label="Analytics" />
+          <Tab icon={<Dashboard />} label="User Functions" />
+        </Tabs>
 
-      {/* Users Tab */}
-      <TabPanel value={tab} index={0}>
-        <Box sx={{ mb: 2, display: "flex", gap: 2, justifyContent: "flex-end" }}>
-          <Button variant="contained" startIcon={<Download />} onClick={() => downloadFile(users, "user_list.csv")}>
-            CSV
-          </Button>
-          <Button variant="contained" startIcon={<Download />} onClick={() => downloadPDF(users, "users.pdf", "User List")}>
-            PDF
-          </Button>
-        </Box>
-        <Paper>
-          <TableContainer>
-            <Table>
-              <TableHead sx={{ bgcolor: "grey.100" }}>
-                <TableRow>
-                  <TableCell>Name</TableCell>
-                  <TableCell>Email</TableCell>
-                  <TableCell>Fuel Card</TableCell>
-                  <TableCell>Role</TableCell>
-                  <TableCell>Actions</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {users.map((u, i) => (
-                  <TableRow key={i} hover>
-                    <TableCell>{u.name}</TableCell>
-                    <TableCell>{u.email}</TableCell>
-                    <TableCell>{u.fuel_card_no}</TableCell>
+        {/* Users */}
+        <TabPanel value={tab} index={0}>
+          <Box sx={{ mb: 2, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <TextField
+              size="small"
+              placeholder="Search users..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              InputProps={{ startAdornment: <Search sx={{ mr: 1 }} /> }}
+            />
+            <Box sx={{ display: "flex", gap: 2 }}>
+              <Button variant="contained" startIcon={<Download />} onClick={() => downloadFile(users, "users.csv")}>
+                CSV
+              </Button>
+              <Button variant="contained" startIcon={<Download />} onClick={() => downloadPDF(users, "users.pdf", "User List")}>
+                PDF
+              </Button>
+            </Box>
+          </Box>
+          <Paper>
+            <TableContainer>
+              <Table>
+                <TableHead sx={{ bgcolor: "grey.100" }}>
+                  <TableRow>
+                    <TableCell>Name</TableCell>
+                    <TableCell>Email</TableCell>
+                    <TableCell>Role</TableCell>
+                    <TableCell>Actions</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {filteredUsers.map((u, i) => (
+                    <TableRow key={i} hover>
+                      <TableCell>{u.name}</TableCell>
+                      <TableCell>{u.email}</TableCell>
+                      <TableCell>
+                        <Chip label={u.role} color={u.role === "admin" ? "success" : "default"} size="small" />
+                      </TableCell>
+                      <TableCell>
+                        {u.role !== "admin" && (
+                          <Button size="small" onClick={() => updateRole(u.email, "admin")}>Make Admin</Button>
+                        )}
+                        {u.role !== "employee" && (
+                          <Button size="small" variant="outlined" onClick={() => updateRole(u.email, "employee")}>Make Employee</Button>
+                        )}
+                        <Button size="small" color="error" onClick={() => deleteUser(u.email)}>Delete</Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Paper>
+        </TabPanel>
+
+        {/* Travel Logs */}
+       <TabPanel value={tab} index={1}>
+  {Object.keys(groupedLogs).map((userEmail, idx) => {
+    const userLogs = groupedLogs[userEmail].sort(
+      (a, b) => new Date(b.date) - new Date(a.date)
+    );
+
+    return (
+      <Accordion key={idx} defaultExpanded>
+        <AccordionSummary expandIcon={<ExpandMore />}>
+          <Typography fontWeight={700}>{userEmail}</Typography>
+          <Chip
+            label={`${userLogs.length} entries`}
+            color="primary"
+            size="small"
+            sx={{ ml: 2 }}
+          />
+          {/* 📥 Export Buttons per user */}
+          <Box sx={{ ml: "auto", display: "flex", gap: 1 }}>
+            <Button
+              variant="contained"
+              size="small"
+              startIcon={<Download />}
+              onClick={() => downloadFile(userLogs, `${userEmail}_logs.csv`)}
+            >
+              CSV
+            </Button>
+            <Button
+              variant="contained"
+              size="small"
+              startIcon={<Download />}
+              onClick={() => downloadPDF(userLogs, `${userEmail}_logs.pdf`, `${userEmail} Travel Logs`)}
+            >
+              PDF
+            </Button>
+          </Box>
+        </AccordionSummary>
+
+        <AccordionDetails>
+          <Table size="small">
+            <TableHead>
+              <TableRow>
+                <TableCell>Date</TableCell>
+                <TableCell>Start</TableCell>
+                <TableCell>End</TableCell>
+                <TableCell>Official KM</TableCell>
+                <TableCell>Private KM</TableCell>
+                <TableCell>Total KM</TableCell>
+                <TableCell>Remarks</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {userLogs.map((log, i) => {
+                const totalKm =
+                  log.meter_end && log.meter_start
+                    ? log.meter_end - log.meter_start
+                    : log.total_km;
+
+                return (
+                  <TableRow
+                    key={i}
+                    hover
+                    sx={{ bgcolor: i === 0 ? "rgba(76, 175, 80, 0.08)" : "inherit" }}
+                  >
+                    <TableCell>{new Date(log.date).toLocaleDateString()}</TableCell>
+                    <TableCell>{log.meter_start?.toLocaleString()}</TableCell>
+                    <TableCell>{log.meter_end?.toLocaleString()}</TableCell>
                     <TableCell>
-                      <Chip label={u.role} color={u.role === "admin" ? "success" : "default"} size="small" />
+                      <Chip label={`${log.official_km} km`} color="success" size="small" />
                     </TableCell>
                     <TableCell>
-                      {u.role !== "admin" && (
-                        <Button variant="contained" size="small" sx={{ mr: 1 }} onClick={() => updateRole(u.email, "admin")} disabled={loading}>
-                          Make Admin
-                        </Button>
+                      <Chip label={`${log.private_km} km`} color="secondary" size="small" />
+                    </TableCell>
+                    <TableCell>
+                      <Chip label={`${totalKm || 0} km`} color="primary" size="small" />
+                    </TableCell>
+                    <TableCell>
+                      {log.remarks || "—"}
+                      {i === 0 && (
+                        <Chip icon={<FiberNew />} label="NEW" color="success" size="small" sx={{ ml: 1 }} />
                       )}
-                      {u.role !== "employee" && (
-                        <Button variant="outlined" size="small" sx={{ mr: 1 }} onClick={() => updateRole(u.email, "employee")} disabled={loading}>
-                          Make Employee
-                        </Button>
-                      )}
-                      <Button variant="contained" color="error" size="small" onClick={() => deleteUser(u.email)} disabled={loading}>
-                        Delete
-                      </Button>
-                      <Button variant="text" size="small" onClick={() => navigate(`/dashboard?user=${u.email}`)}>
-                        View Dashboard
-                      </Button>
                     </TableCell>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </Paper>
-      </TabPanel>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </AccordionDetails>
+      </Accordion>
+    );
+  })}
+</TabPanel>
 
-      {/* Travel Logs Tab */}
-      <TabPanel value={tab} index={1}>
-        <Box sx={{ mb: 2, display: "flex", gap: 2, justifyContent: "flex-end" }}>
-          <Button variant="contained" startIcon={<Download />} onClick={() => downloadFile(logs, "travel_logs.csv")}>
-            CSV
-          </Button>
-          <Button variant="contained" startIcon={<Download />} onClick={() => downloadPDF(logs, "travel_logs.pdf", "Travel Logs")}>
-            PDF
-          </Button>
-        </Box>
-        <Paper>
-          <TableContainer>
-            <Table>
-              <TableHead sx={{ bgcolor: "grey.100" }}>
-                <TableRow>
-                  <TableCell>User</TableCell>
-                  <TableCell>Date</TableCell>
-                  <TableCell>Start</TableCell>
-                  <TableCell>End</TableCell>
-                  <TableCell>Official KM</TableCell>
-                  <TableCell>Private KM</TableCell>
-                  <TableCell>Total KM</TableCell>
-                  <TableCell>Remarks</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {logs.map((log, i) => (
-                  <TableRow key={i} hover>
-                    <TableCell>{log.user_email}</TableCell>
-                    <TableCell>{log.date}</TableCell>
-                    <TableCell>{log.meter_start}</TableCell>
-                    <TableCell>{log.meter_end}</TableCell>
-                    <TableCell>{log.official_km}</TableCell>
-                    <TableCell>{log.private_km}</TableCell>
-                    <TableCell>
-                      <Chip label={`${log.total_km} km`} color="primary" size="small" />
-                    </TableCell>
-                    <TableCell>{log.remarks || "—"}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </Paper>
-      </TabPanel>
 
-      {/* Analytics Tab */}
-      <TabPanel value={tab} index={2}>
-        <Box sx={{ mb: 2, display: "flex", gap: 2, justifyContent: "flex-end" }}>
-          <Button
-            variant="contained"
-            startIcon={<Download />}
-            onClick={() => downloadFile([{ officialTotal, privateTotal, distanceByUser }], "analytics_summary.json", "json")}
-          >
-            JSON
-          </Button>
-          <Button
-            variant="contained"
-            startIcon={<Download />}
-            onClick={() => downloadPDF([{ OfficialKM: officialTotal, PrivateKM: privateTotal, Users: users.length }], "analytics_summary.pdf", "Analytics Summary")}
-          >
-            PDF
-          </Button>
-        </Box>
+        {/* Analytics */}
+        <TabPanel value={tab} index={2}>
+          <Typography variant="h6" gutterBottom>Analytics Overview</Typography>
+          <Box sx={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+            <ResponsiveContainer width="45%" height={300}>
+              <PieChart>
+                <Pie data={[{ name: "Official KM", value: officialTotal }, { name: "Private KM", value: privateTotal }]} dataKey="value" outerRadius={100} label>
+                  <Cell fill="#2E7D32" />
+                  <Cell fill="#c62828" />
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+            <ResponsiveContainer width="45%" height={300}>
+              <RBarChart data={distanceByUser}>
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip />
+                <Bar dataKey="total" fill="#1976d2" />
+              </RBarChart>
+            </ResponsiveContainer>
+          </Box>
+        </TabPanel>
 
-        <Typography variant="h6" gutterBottom>
-          Analytics Overview
-        </Typography>
-
-        <Box sx={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-          {/* Official vs Private Pie */}
-          <ResponsiveContainer width="45%" height={300}>
-            <PieChart>
-              <Pie data={[{ name: "Official KM", value: officialTotal }, { name: "Private KM", value: privateTotal }]} dataKey="value" outerRadius={100} label>
-                <Cell fill="#2E7D32" /> {/* Haycarb Green */}
-                <Cell fill="#c62828" /> {/* Red for private */}
-              </Pie>
-              <Tooltip />
-            </PieChart>
-          </ResponsiveContainer>
-
-          {/* Distance by User Bar */}
-          <ResponsiveContainer width="45%" height={300}>
-            <RBarChart data={distanceByUser}>
-              <XAxis dataKey="name" />
-              <YAxis />
-              <Tooltip />
-              <Bar dataKey="total" fill="#1976d2" />
-            </RBarChart>
-          </ResponsiveContainer>
-        </Box>
-      </TabPanel>
-
-      {/* User Functions Tab */}
-      <TabPanel value={tab} index={3}>
-        <Typography variant="h6" gutterBottom>
-          User Functions (Preview)
-        </Typography>
-        <Travels />
-      </TabPanel>
+        {/* User Functions */}
+        <TabPanel value={tab} index={3}>
+          <Travels />
+        </TabPanel>
+      </Paper>
 
       {/* Snackbar */}
       <Snackbar

@@ -13,8 +13,6 @@ import {
   Alert,
   Divider,
   CircularProgress,
-  alpha,
-  useTheme,
 } from "@mui/material";
 import {
   Visibility,
@@ -35,7 +33,6 @@ function Register() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const theme = useTheme();
 
   const handleRegister = async (e) => {
     e.preventDefault();
@@ -72,17 +69,25 @@ function Register() {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.1)} 0%, ${alpha(theme.palette.secondary.main, 0.1)} 100%)`,
+        background: "linear-gradient(135deg, #1B5E20 0%, #388E3C 50%, #66BB6A 100%)", 
+        // 👆 Unique 3-tone green gradient
         py: 4,
         px: 2,
       }}
     >
       <Container maxWidth="sm">
-        <Paper elevation={8} sx={{ borderRadius: 3, background: "white" }}>
+        <Paper
+          elevation={10}
+          sx={{
+            borderRadius: 3,
+            background: "white",
+            overflow: "hidden",
+          }}
+        >
           {/* Header */}
           <Box
             sx={{
-              background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
+              background: "linear-gradient(135deg, #2E7D32, #1B5E20)",
               color: "white",
               py: 5,
               px: 4,
@@ -94,13 +99,12 @@ function Register() {
                 width: 80,
                 height: 80,
                 borderRadius: "50%",
-                background: alpha("#fff", 0.2),
+                background: "rgba(255,255,255,0.15)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 margin: "0 auto",
                 mb: 2,
-                backdropFilter: "blur(10px)",
               }}
             >
               <PersonOutline sx={{ fontSize: 40 }} />
@@ -178,7 +182,16 @@ function Register() {
                   variant="contained"
                   size="large"
                   disabled={loading}
-                  sx={{ mt: 2, py: 1.5, fontSize: "1rem", fontWeight: 600 }}
+                  sx={{
+                    mt: 2,
+                    py: 1.5,
+                    fontSize: "1rem",
+                    fontWeight: 600,
+                    background: "linear-gradient(135deg, #1B5E20, #43A047)",
+                    "&:hover": {
+                      background: "linear-gradient(135deg, #2E7D32, #1B5E20)",
+                    },
+                  }}
                   startIcon={loading && <CircularProgress size={20} />}
                 >
                   {loading ? "Creating Account..." : "Create Account"}

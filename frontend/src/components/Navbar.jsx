@@ -1,138 +1,48 @@
-import { useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
-import {
-  AppBar,
-  Box,
-  Toolbar,
-  IconButton,
-  Typography,
-  Menu,
-  Container,
-  Avatar,
-  Tooltip,
-  MenuItem,
-  Divider,
-  useTheme,
-  alpha,
-} from "@mui/material";
-import {
-  Person,
-  Logout,
-  LocalGasStation,
-  ArrowBack,
-  ArrowForward,
-} from "@mui/icons-material";
+import { AppBar, Toolbar, Typography, IconButton, Avatar, Box } from "@mui/material";
+import LogoutIcon from "@mui/icons-material/Logout";
+import { useNavigate } from "react-router-dom";
 
-function Navbar() {
-  const [anchorElUser, setAnchorElUser] = useState(null);
-  const navigate = useNavigate();
-  const location = useLocation();
-  const theme = useTheme();
-
-  const hideNavbarRoutes = ["/", "/register"];
-  if (hideNavbarRoutes.includes(location.pathname)) return null;
-
+export default function Navbar() {
   const user = JSON.parse(localStorage.getItem("user") || "{}");
-
-  const handleOpenUserMenu = (event) => setAnchorElUser(event.currentTarget);
-  const handleCloseUserMenu = () => setAnchorElUser(null);
+  const navigate = useNavigate();
 
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
-    navigate("/");
-    handleCloseUserMenu();
+    window.location.href = "/";
   };
 
   return (
     <AppBar
-      position="sticky"
-      elevation={2}
+      position="fixed"
       sx={{
-        background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
+        zIndex: (theme) => theme.zIndex.drawer + 1,
+        bgcolor: "#2E7D32",
       }}
     >
-      <Container maxWidth="xl">
-        <Toolbar disableGutters sx={{ gap: 1 }}>
-          {/* Back & Forward Buttons */}
-          <IconButton color="inherit" onClick={() => navigate(-1)}>
-            <ArrowBack />
-          </IconButton>
-          <IconButton color="inherit" onClick={() => navigate(1)}>
-            <ArrowForward />
-          </IconButton>
-
-          {/* Logo - Left */}
-          <Box
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              cursor: "pointer",
-              flexGrow: 1,
-              ml: 2,
-            }}
-            onClick={() => navigate("/dashboard")}
+      <Toolbar>
+        <Typography variant="h6" sx={{ flexGrow: 1, fontWeight: 600 }}>
+          FuelTracker System
+        </Typography>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+          <Typography
+            variant="body1"
+            sx={{ cursor: "pointer" }}
+            onClick={() => navigate("/profile")}
           >
-            <LocalGasStation sx={{ fontSize: 32, mr: 1 }} />
-            <Typography
-              variant="h6"
-              noWrap
-              sx={{ fontWeight: 700, letterSpacing: ".1rem", color: "inherit" }}
-            >
-              Fuel Manager
-            </Typography>
-          </Box>
-
-          {/* User Avatar Menu */}
-          <Box sx={{ flexGrow: 0 }}>
-            <Tooltip title="Open settings">
-              <IconButton onClick={handleOpenUserMenu} sx={{ p: 0 }}>
-                <Avatar
-                  sx={{
-                    bgcolor: alpha("#fff", 0.2),
-                    color: "white",
-                    fontWeight: "bold",
-                  }}
-                >
-                  {user.name?.charAt(0).toUpperCase() || "U"}
-                </Avatar>
-              </IconButton>
-            </Tooltip>
-            <Menu
-              sx={{ mt: "45px" }}
-              anchorEl={anchorElUser}
-              anchorOrigin={{ vertical: "top", horizontal: "right" }}
-              transformOrigin={{ vertical: "top", horizontal: "right" }}
-              open={Boolean(anchorElUser)}
-              onClose={handleCloseUserMenu}
-            >
-              <Box sx={{ px: 2, py: 1, minWidth: 200 }}>
-                <Typography variant="subtitle2" color="text.secondary">
-                  Signed in as
-                </Typography>
-                <Typography variant="body1" fontWeight="600" noWrap>
-                  {user.name || "User"}
-                </Typography>
-                <Typography variant="caption" color="text.secondary" noWrap>
-                  {user.email || ""}
-                </Typography>
-              </Box>
-              <Divider />
-              <MenuItem onClick={() => navigate("/profile")}>
-                <Person fontSize="small" />
-                <Typography sx={{ ml: 1 }}>Profile</Typography>
-              </MenuItem>
-              <Divider />
-              <MenuItem onClick={handleLogout}>
-                <Logout fontSize="small" color="error" />
-                <Typography sx={{ ml: 1, color: "error.main" }}>Logout</Typography>
-              </MenuItem>
-            </Menu>
-          </Box>
-        </Toolbar>
-      </Container>
+            {user?.name || "User"}
+          </Typography>
+          <Avatar
+            sx={{ bgcolor: "orange", cursor: "pointer" }}
+            onClick={() => navigate("/profile")}
+          >
+            {user?.name ? user.name[0].toUpperCase() : "U"}
+          </Avatar>
+          <IconButton color="inherit" onClick={handleLogout}>
+            <LogoutIcon />
+          </IconButton>
+        </Box>
+      </Toolbar>
     </AppBar>
   );
 }
-
-export default Navbar;
