@@ -7,10 +7,12 @@ app = FastAPI(title="FuelTrackr API")
 
 # ✅ Allowed origins (React dev + add production later)
 origins = [
-    "http://localhost:5173",   # Vite dev server
-    "http://127.0.0.1:5173",   # alternative local address
-    # "https://your-frontend-domain.com",  # add production frontend here
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "https://fueltracker.vercel.app",   # your Vercel domain
+    "https://www.yourcompanydomain.com" # optional custom domain
 ]
+
 
 # ✅ CORS setup
 app.add_middleware(
