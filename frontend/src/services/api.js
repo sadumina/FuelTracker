@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const API = axios.create({
-  baseURL: "https://fueltracker-gtyc.onrender.com",// backend base URL
+  baseURL: "https://fueltracker-gtyc.onrender.com",
 });
 
 // Add token to all requests if available
