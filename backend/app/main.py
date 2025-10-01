@@ -5,19 +5,15 @@ from app.database import db
 
 app = FastAPI(title="FuelTrackr API")
 
-# ✅ Allowed origins (React dev + add production later)
-origins = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-    "https://fuel-tracker-6ino-14zwgu3ia-saduminas-projects.vercel.app/",   # your Vercel domain
-    "https://www.yourcompanydomain.com" # optional custom domain
-]
-
-
 # ✅ CORS setup
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,       # must be explicit, not "*"
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "https://www.yourcompanydomain.com",  # optional custom domain
+    ],
+    allow_origin_regex=r"https://.*\.vercel\.app",   # ✅ allow ALL vercel.app subdomains
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
