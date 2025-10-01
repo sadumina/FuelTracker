@@ -9,7 +9,7 @@ app = FastAPI(title="FuelTrackr API")
 origins = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
-    "https://fueltracker.vercel.app",   # your Vercel domain
+    "https://fuel-tracker-6ino.vercel.app",   # your Vercel domain
     "https://www.yourcompanydomain.com" # optional custom domain
 ]
 
